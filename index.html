@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medisave: Your Trusted Pharmacy Partner</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .modal {
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-teal-50 to-blue-50 font-inter antialiased flex flex-col items-center py-8 px-4 sm:px-6 lg:px-8">
+
+    <!-- Main Container -->
+    <div id="app" class="w-full max-w-4xl">
+        <header class="w-full mb-10 text-center flex flex-col items-center">
+            <img
+                src="2.png" style="width:200px;height:200px;"
+                alt="Medisave Logo"
+                class="h-24 sm:h-32 mb-4"
+                onerror="this.onerror=null;this.src='https://placehold.co/150x50/0077B6/FFFFFF?text=Medisave'"
+            />
+            <p style="color:#4a4a4a; font-size: 1.5em;"><b>Save on <span style="color:#2b6cb0;">MEDS</span>. Not on <span style="color:#6bb740;">HEALTH</span>.</b></p>
+        </header>
+
+        <!-- Search Form -->
+        <form id="searchForm" class="w-full max-w-xl mx-auto mb-10">
+            <div class="flex flex-col sm:flex-row gap-4">
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Search for medicines (e.g., Nexpro 40, Montas-L)"
+                    class="flex-grow p-4 border border-teal-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 ease-in-out text-lg placeholder-teal-400"
+                />
+                <button
+                    type="submit"
+                    class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 ease-in-out text-lg"
+                >
+                    Search
+                </button>
+            </div>
+        </form>
+
+        <!-- Search Results Area -->
+        <div id="searchResults" class="w-full max-w-4xl">
+            <!-- Search results will be rendered here -->
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 mt-12 w-full max-w-2xl justify-center mx-auto">
+            <button
+                id="reviewBtn"
+                class="flex-1 px-4 py-3 bg-blue-500 text-white font-semibold rounded-lg shadow-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 ease-in-out text-base"
+            >
+                Leave a Review
+            </button>
+            <button
+                id="chatbotBtn"
+                class="flex-1 px-4 py-3 bg-purple-500 text-white font-semibold rounded-lg shadow-lg hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition duration-200 ease-in-out text-base"
+            >
+                Chat with a Health Assistant 💬
+            </button>
+            <button
+                id="scannerBtn"
+                class="flex-1 px-4 py-3 bg-pink-500 text-white font-semibold rounded-lg shadow-lg hover:bg-pink-600 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 transition duration-200 ease-in-out text-base"
+            >
+                Scan Prescription 📄
+            </button>
+        </div>
+
+        <footer class="w-full max-w-4xl mt-12 text-center text-blue-600 text-sm mx-auto">
+            <p>&copy; 2025 Medisave. All rights reserved.</p>
+            <p class="mt-2">Connecting you to the best medicine prices in Guwahati and beyond.</p>
+        </footer>
+    </div>
+
+    <!-- Modals (Initially Hidden) -->
+    <div id="medicineDetailModal" class="modal fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden"></div>
+    <div id="reviewModal" class="modal fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden"></div>
+    <div id="chatbotModal" class="modal fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden"></div>
+    <div id="scannerModal" class="modal fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Variables
+        const allMockMedicines = [
+            {
+                id: 'montas-l',
+                name: 'Montas-L',
+                genericName: 'Montelukast Sodium and Levocetirizine Hydrochloride',
+                description: 'A medicine that treats allergic symptoms like a runny nose, stuffy nose, sneezing, itching, swelling, watery eyes, and congestion.',
+                prices: [
+                    { pharmacy: 'Montas-L (Brand)', price: 11.90, type: 'brand' },
+                    { pharmacy: 'Monticope Tablet (Mankind Pharma Ltd)', price: 9.89, type: 'generic' },
+                    { pharmacy: 'Odimont-LC Tablet (Zydus Cadila)', price: 24.33, type: 'generic' },
+                    { pharmacy: 'Monteprax-LC Tablet (Praxis Health Care)', price: 7.35, type: 'generic' },
+                    { pharmacy: 'Ezylast-LC Tablet (Ezylab Healthcare Pvt Ltd)', price: 7.35, type: 'generic' },
+                    { pharmacy: 'Nevocit M 5mg/10mg Tablet (Nimbles Biotech Pvt Ltd)', price: 7.19, type: 'generic' },
+                    { pharmacy: 'Koltus M Tablet (Aptus Pharma Pvt Ltd)', price: 7.19, type: 'generic' },
+                ],
+            },
+            {
+                id: 'nexpro-40',
+                name: 'Nexpro 40',
+                genericName: 'Esomeprazole Magnesium',
+                description: 'Used to treat conditions caused by excessive stomach acid production, such as GERD, peptic ulcers, and Zollinger-Ellison syndrome.',
+                prices: [
+                    { pharmacy: 'Nexpro 40 (Brand)', price: 12.00, type: 'brand' },
+                    { pharmacy: 'Esomac 40 Tablet (Cipla Ltd)', price: 12.13, type: 'generic' },
+                    { pharmacy: 'Raciper 40 Tablet (Sun Pharmaceutical Industries Ltd)', price: 11.07, type: 'generic' },
+                    { pharmacy: 'Lupisoz Tablet (Lupin Ltd)', price: 11.10, type: 'generic' },
+                    { pharmacy: 'Yees 40 Tablet (Alkem Laboratories Ltd)', price: 11.60, type: 'generic' },
+                    { pharmacy: 'Esomefol Tablet (Leeford Healthcare Ltd)', price: 4.57, type: 'generic' },
+                ],
+            },
+        ];
+
+        // --- Firebase Initialization ---
+        let db, auth, userId;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        async function initializeFirebase() {
+            try {
+                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : null);
+                if (!firebaseConfig) {
+                    console.error("Firebase config not found. App will run without Firestore features.");
+                    return;
+                }
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log("User logged in with ID:", userId);
+                    } else {
+                        userId = `anon-${crypto.randomUUID()}`;
+                        console.log("Logged in anonymously with ID:", userId);
+                    }
+                });
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (e) {
+                console.error("Firebase initialization error:", e);
+            }
+        }
+        initializeFirebase();
+
+        // --- Helper Functions ---
+        function calculatePercentageDifference(brandPrice, substitutePrice) {
+            if (brandPrice === 0) return '';
+            const diff = ((substitutePrice - brandPrice) / brandPrice) * 100;
+            if (diff > 0) {
+                return `${Math.round(diff)}% costlier`;
+            } else if (diff < 0) {
+                return `${Math.round(Math.abs(diff))}% cheaper`;
+            }
+            return 'Same price';
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function pcmToWav(pcmData, sampleRate) {
+            const numChannels = 1;
+            const sampleSize = 16;
+            const byteRate = sampleRate * numChannels * (sampleSize / 8);
+            const blockAlign = numChannels * (sampleSize / 8);
+            const dataSize = pcmData.byteLength;
+            const buffer = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer);
+            let offset = 0;
+
+            function writeString(view, offset, str) {
+                for (let i = 0; i < str.length; i++) {
+                    view.setUint8(offset + i, str.charCodeAt(i));
+                }
+            }
+
+            writeString(view, offset, 'RIFF'); offset += 4;
+            view.setUint32(offset, 36 + dataSize, true); offset += 4;
+            writeString(view, offset, 'WAVE'); offset += 4;
+            writeString(view, offset, 'fmt '); offset += 4;
+            view.setUint32(offset, 16, true); offset += 4;
+            view.setUint16(offset, 1, true); offset += 2;
+            view.setUint16(offset, numChannels, true); offset += 2;
+            view.setUint32(offset, sampleRate, true); offset += 4;
+            view.setUint32(offset, byteRate, true); offset += 4;
+            view.setUint16(offset, blockAlign, true); offset += 2;
+            view.setUint16(offset, sampleSize, true); offset += 2;
+            writeString(view, offset, 'data'); offset += 4;
+            view.setUint32(offset, dataSize, true); offset += 4;
+            
+            const pcmBytes = new Uint8Array(pcmData.buffer);
+            for(let i = 0; i < dataSize; i++) {
+                view.setUint8(offset + i, pcmBytes[i]);
+            }
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        // --- Rendering Functions ---
+        function renderSearchResults(medicines) {
+            const resultsContainer = document.getElementById('searchResults');
+            resultsContainer.innerHTML = ''; // Clear previous results
+
+            if (medicines.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="text-center text-teal-700 text-xl py-8">
+                        No results found. Try another medicine!
+                    </div>
+                `;
+                return;
+            }
+
+            const grid = document.createElement('div');
+            grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6';
+
+            medicines.forEach(medicine => {
+                const lowestPriceItem = medicine.prices.reduce((minPriceItem, currentItem) => {
+                    return currentItem.price < minPriceItem.price ? currentItem : minPriceItem;
+                }, medicine.prices[0]);
+
+                const cardHtml = `
+                    <div
+                        class="bg-white rounded-xl shadow-md p-6 border border-teal-200 cursor-pointer hover:shadow-lg hover:border-teal-300 transform hover:-translate-y-1 transition-all duration-200 ease-in-out"
+                        data-medicine-id="${medicine.id}"
+                    >
+                        <h3 class="text-2xl font-bold text-teal-800 mb-2">${medicine.name}</h3>
+                        <p class="text-blue-600 text-md italic mb-4">Generic: ${medicine.genericName}</p>
+                        <div class="flex justify-between items-center mt-4">
+                            <span class="text-gray-700 font-semibold">Lowest Price Found:</span>
+                            <span class="text-teal-800 font-bold text-2xl">₹${lowestPriceItem.price.toFixed(2)}</span>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-2">Available from: ${lowestPriceItem.pharmacy}</p>
+                        <p class="text-sm text-teal-500 mt-3 text-right font-medium">Click for details & more options</p>
+                    </div>
+                `;
+                grid.innerHTML += cardHtml;
+            });
+
+            resultsContainer.appendChild(grid);
+            
+            grid.querySelectorAll('[data-medicine-id]').forEach(card => {
+                card.addEventListener('click', () => {
+                    const medicineId = card.getAttribute('data-medicine-id');
+                    const selectedMedicine = allMockMedicines.find(m => m.id === medicineId);
+                    renderMedicineDetailView(selectedMedicine);
+                });
+            });
+        }
+
+        function renderMedicineDetailView(medicine) {
+            const modal = document.getElementById('medicineDetailModal');
+            const brandPriceItem = medicine.prices.find(p => p.type === 'brand');
+            const referencePrice = brandPriceItem ? brandPriceItem.price : null;
+
+            let pricesHtml = medicine.prices.sort((a, b) => a.price - b.price).map((item) => {
+                const diffHtml = referencePrice && item.type !== 'brand' ? `
+                    <span class="text-sm font-medium px-2 py-1 rounded-full ${item.price < referencePrice ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}">
+                        ${calculatePercentageDifference(referencePrice, item.price)}
+                    </span>
+                ` : '';
+                return `
+                    <li class="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-teal-50 p-4 rounded-lg shadow-inner">
+                        <div class="flex flex-col items-start mb-2 sm:mb-0">
+                            <span class="text-teal-800 font-medium text-lg">${item.pharmacy}</span>
+                            <span class="text-blue-600 text-sm">Type: ${item.type.charAt(0).toUpperCase() + item.type.slice(1)}</span>
+                        </div>
+                        <div class="flex items-center space-x-2 mt-2 sm:mt-0">
+                            <span class="text-teal-800 font-bold text-2xl">₹${item.price.toFixed(2)}/tablet</span>
+                            ${diffHtml}
+                            <button class="ml-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200 ease-in-out text-base font-medium shadow-md">
+                                Buy Now
+                            </button>
+                        </div>
+                    </li>
+                `;
+            }).join('');
+
+            const detailHtml = `
+                <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-teal-800">${medicine.name} Details</h2>
+                        <button id="closeDetailModal" class="text-gray-500 hover:text-gray-800 text-3xl font-bold p-2 leading-none">&times;</button>
+                    </div>
+                    <p class="text-blue-600 text-lg italic mb-2">Generic: ${medicine.genericName}</p>
+                    <p class="text-gray-700 text-md mb-4">${medicine.description}</p>
+                    <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                        <button id="readAloudBtn" class="flex-1 py-3 bg-purple-600 text-white rounded-md font-semibold hover:bg-purple-700 transition duration-200">
+                            Read Aloud 🗣️
+                        </button>
+                        <button id="explainBtn" class="flex-1 py-3 bg-indigo-600 text-white rounded-md font-semibold hover:bg-indigo-700 transition duration-200">
+                            Explain in Details 📑
+                        </button>
+                    </div>
+                    <div id="explanationArea" class="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg hidden">
+                        <h4 class="font-bold text-indigo-800 mb-2">Simple Explanation:</h4>
+                        <p id="explanationText" class="text-gray-700 whitespace-pre-wrap"></p>
+                    </div>
+                    ${referencePrice ? `<div class="flex items-center justify-between bg-teal-100 p-4 rounded-lg shadow-inner my-4">
+                        <span class="text-teal-800 font-bold text-lg">Brand Price (${brandPriceItem.pharmacy.split('(')[0].trim()}):</span>
+                        <span class="text-teal-800 font-bold text-2xl">₹${referencePrice.toFixed(2)}/tablet</span>
+                    </div>` : ''}
+                    <h3 class="text-xl font-semibold text-teal-800 mb-3">All Available Options:</h3>
+                    <ul class="space-y-4 mb-8">
+                        ${pricesHtml}
+                    </ul>
+                </div>
+            `;
+            modal.innerHTML = detailHtml;
+            modal.classList.remove('hidden');
+
+            document.getElementById('closeDetailModal').addEventListener('click', () => modal.classList.add('hidden'));
+
+            // Gemini API Feature Listeners
+            document.getElementById('readAloudBtn').addEventListener('click', async (event) => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = 'Generating...';
+                btn.disabled = true;
+
+                try {
+                    const ttsText = `Instructions for ${medicine.name}. Description: ${medicine.description}`;
+                    const payload = {
+                        contents: [{ parts: [{ text: ttsText }] }],
+                        generationConfig: {
+                            responseModalities: ["AUDIO"],
+                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } }
+                        },
+                        model: "gemini-2.5-flash-preview-tts"
+                    };
+                    const apiKey = "AIzaSyB_-k73lONeSsAheB06V4ZGLSB_J0ML9QU";
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    const audioData = result.candidates[0]?.content?.parts?.[0]?.inlineData?.data;
+                    const mimeType = result.candidates[0]?.content?.parts?.[0]?.inlineData?.mimeType;
+
+                    if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                        const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                        const sampleRate = sampleRateMatch ? parseInt(sampleRateMatch[1], 10) : 16000;
+                        const pcmData = base64ToArrayBuffer(audioData);
+                        const pcm16 = new Int16Array(pcmData);
+                        const wavBlob = pcmToWav(pcm16, sampleRate);
+                        const audioUrl = URL.createObjectURL(wavBlob);
+                        const audio = new Audio(audioUrl);
+                        audio.play();
+                    } else {
+                        console.error("Audio data or mime type is missing from the response.");
+                    }
+                } catch (error) {
+                    console.error("Error with Text-to-Speech API:", error);
+                } finally {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            });
+
+            document.getElementById('explainBtn').addEventListener('click', async (event) => {
+                const btn = event.target;
+                const explanationArea = document.getElementById('explanationArea');
+                const explanationText = document.getElementById('explanationText');
+                const originalText = btn.textContent;
+                btn.textContent = 'Generating...';
+                btn.disabled = true;
+
+                explanationArea.classList.remove('hidden');
+                explanationText.textContent = 'Generating...';
+
+                const prompt = `As a medical assistant, explain what ${medicine.genericName} is used for, the common symptoms it treats, and a simple explanation of how it works. Use simple language and no medical jargon.`;
+                const payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }] };
+                const apiKey = "AIzaSyB_-k73lONeSsAheB06V4ZGLSB_J0ML9QU";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    const text = result.candidates[0]?.content?.parts[0]?.text || "Sorry, I couldn't generate an explanation at this time.";
+                    explanationText.textContent = text;
+                } catch (error) {
+                    console.error("Error generating explanation:", error);
+                    explanationText.textContent = "An error occurred while generating the explanation.";
+                } finally {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            });
+        }
+        
+        // --- Review Modal ---
+        function renderReviewModal() {
+            const modal = document.getElementById('reviewModal');
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-xl max-h-[90vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-teal-800">User Reviews</h2>
+                        <button id="closeReviewModal" class="text-gray-500 hover:text-gray-800 text-3xl font-bold p-2 leading-none">&times;</button>
+                    </div>
+                    <p class="text-sm text-gray-500 mb-4">Your User ID: **<span id="reviewUserId">${userId}</span>**</p>
+                    <form id="reviewForm" class="mb-8 p-4 border border-teal-200 rounded-lg bg-teal-50">
+                        <h3 class="text-xl font-semibold text-teal-800 mb-4">Leave a Review</h3>
+                        <input type="text" id="reviewerName" placeholder="Your Name" class="w-full p-3 mb-3 border border-teal-300 rounded-md focus:ring-2 focus:ring-blue-500" required />
+                        <textarea id="reviewText" placeholder="Your Review" rows="4" class="w-full p-3 mb-4 border border-teal-300 rounded-md focus:ring-2 focus:ring-blue-500 resize-y" required></textarea>
+                        <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-md font-semibold hover:bg-blue-700 transition duration-200">Submit Review</button>
+                    </form>
+                    <h3 class="text-xl font-semibold text-teal-800 mb-4">What Our Users Say:</h3>
+                    <div id="reviewsContainer" class="space-y-4"></div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+
+            document.getElementById('closeReviewModal').addEventListener('click', () => modal.classList.add('hidden'));
+
+            const reviewForm = document.getElementById('reviewForm');
+            reviewForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const reviewerName = document.getElementById('reviewerName').value;
+                const reviewText = document.getElementById('reviewText').value;
+
+                if (reviewerName.trim() && reviewText.trim()) {
+                    try {
+                        const reviewData = {
+                            userId,
+                            name: reviewerName.trim(),
+                            text: reviewText.trim(),
+                            timestamp: serverTimestamp(),
+                        };
+                        await addDoc(collection(db, `/artifacts/${appId}/public/data/medisave-reviews`), reviewData);
+                        reviewForm.reset();
+                    } catch (e) {
+                        console.error("Error adding review: ", e);
+                    }
+                }
+            });
+
+            const reviewsContainer = document.getElementById('reviewsContainer');
+            if (db) {
+                const q = query(collection(db, `/artifacts/${appId}/public/data/medisave-reviews`));
+                onSnapshot(q, (snapshot) => {
+                    reviewsContainer.innerHTML = '';
+                    if (snapshot.docs.length === 0) {
+                        reviewsContainer.innerHTML = `<p class="text-gray-500 text-center">No reviews yet. Be the first to share your experience!</p>`;
+                        return;
+                    }
+                    snapshot.docs.sort((a,b) => b.data().timestamp - a.data().timestamp).forEach(doc => {
+                        const review = doc.data();
+                        const reviewDiv = document.createElement('div');
+                        reviewDiv.className = 'bg-white p-4 border border-teal-100 rounded-lg shadow-sm';
+                        reviewDiv.innerHTML = `
+                            <p class="font-bold text-teal-800 text-lg mb-1">${review.name}</p>
+                            <p class="text-gray-600 text-sm mb-2">${review.timestamp ? new Date(review.timestamp.toDate()).toLocaleString() : 'Just now'}</p>
+                            <p class="text-gray-700">${review.text}</p>
+                        `;
+                        reviewsContainer.appendChild(reviewDiv);
+                    });
+                });
+            } else {
+                reviewsContainer.innerHTML = `<p class="text-red-500 text-center">Reviews are unavailable. Firebase is not configured.</p>`;
+            }
+        }
+
+        // --- Chatbot Modal ---
+        function renderChatbotModal() {
+            const modal = document.getElementById('chatbotModal');
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-xl flex flex-col h-[80vh] sm:h-[90vh]">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-3xl font-bold text-teal-800">Symptom Checker</h2>
+                        <button id="closeChatbotModal" class="text-gray-500 hover:text-gray-800 text-3xl font-bold p-2 leading-none">&times;</button>
+                    </div>
+                    <div id="chatHistory" class="flex-grow overflow-y-auto mb-4 border-b border-teal-200 p-4 flex flex-col space-y-4">
+                        <div class="flex justify-start">
+                            <div class="max-w-[80%] p-3 rounded-xl shadow-md bg-teal-100 text-teal-800 rounded-bl-none">
+                                <p>Hello! I am a health assistant. Please describe your symptoms. **Remember, I am an AI and cannot provide a medical diagnosis. Always consult with a qualified doctor.**</p>
+                            </div>
+                        </div>
+                    </div>
+                    <form id="chatbotForm" class="flex items-center gap-2">
+                        <textarea id="chatInput" class="flex-grow p-3 border border-teal-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500" rows="2" placeholder="Describe your symptoms..."></textarea>
+                        <button type="submit" id="sendBtn" class="px-6 py-3 rounded-lg font-semibold transition duration-200 shadow-md bg-blue-600 text-white hover:bg-blue-700">Send</button>
+                    </form>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+            document.getElementById('closeChatbotModal').addEventListener('click', () => modal.classList.add('hidden'));
+
+            const chatHistory = document.getElementById('chatHistory');
+            const chatInput = document.getElementById('chatInput');
+            const chatbotForm = document.getElementById('chatbotForm');
+            const sendBtn = document.getElementById('sendBtn');
+            let isTyping = false;
+
+            async function sendMessage() {
+                const userInput = chatInput.value.trim();
+                if (!userInput || isTyping) return;
+                
+                // Add user message to chat
+                const userMsgDiv = document.createElement('div');
+                userMsgDiv.className = 'flex justify-end';
+                userMsgDiv.innerHTML = `<div class="max-w-[80%] p-3 rounded-xl shadow-md bg-blue-500 text-white rounded-br-none">${userInput}</div>`;
+                chatHistory.appendChild(userMsgDiv);
+                chatInput.value = '';
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+                
+                isTyping = true;
+                sendBtn.textContent = 'Sending...';
+                sendBtn.disabled = true;
+
+                const prompt = `You are a helpful health assistant. Provide general, non-diagnostic information based on the symptoms described. Do not attempt to diagnose or recommend specific treatments. Always start your response with a clear disclaimer like: "Disclaimer: This is for informational purposes only and not a substitute for professional medical advice. Please consult a doctor for a proper diagnosis and treatment plan." User's symptoms: ${userInput}.`;
+                const payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }] };
+                const apiKey = "AIzaSyB_-k73lONeSsAheB06V4ZGLSB_J0ML9QU";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    const botResponse = result.candidates[0]?.content?.parts[0]?.text || "Sorry, I couldn't process that. Please try again.";
+                    
+                    const botMsgDiv = document.createElement('div');
+                    botMsgDiv.className = 'flex justify-start';
+                    botMsgDiv.innerHTML = `<div class="max-w-[80%] p-3 rounded-xl shadow-md bg-teal-100 text-teal-800 rounded-bl-none">${botResponse}</div>`;
+                    chatHistory.appendChild(botMsgDiv);
+                } catch (error) {
+                    console.error("Error with API:", error);
+                    const errorMsgDiv = document.createElement('div');
+                    errorMsgDiv.className = 'flex justify-start';
+                    errorMsgDiv.innerHTML = `<div class="max-w-[80%] p-3 rounded-xl shadow-md bg-red-100 text-red-800 rounded-bl-none">I'm having trouble connecting right now. Please try again later.</div>`;
+                    chatHistory.appendChild(errorMsgDiv);
+                } finally {
+                    isTyping = false;
+                    sendBtn.textContent = 'Send';
+                    sendBtn.disabled = false;
+                    chatHistory.scrollTop = chatHistory.scrollHeight;
+                }
+            }
+
+            chatbotForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                sendMessage();
+            });
+
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        }
+
+        // --- Prescription Scanner Modal ---
+        function renderScannerModal() {
+            const modal = document.getElementById('scannerModal');
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-pink-800">Scan Prescription ✨</h2>
+                        <button id="closeScannerModal" class="text-gray-500 hover:text-gray-800 text-3xl font-bold p-2 leading-none">&times;</button>
+                    </div>
+                    <p class="text-gray-600 mb-4">Upload a clear photo of your prescription to find the medicines listed on it.</p>
+                    <div class="flex flex-col items-center justify-center p-6 border-2 border-dashed border-pink-300 rounded-lg">
+                        <div id="imagePlaceholder" class="text-gray-400 text-center mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <p>Drag & drop or click to upload</p>
+                        </div>
+                        <img id="prescriptionImage" src="" alt="Prescription" class="max-h-64 object-contain rounded-md mb-4 hidden" />
+                        <input type="file" id="imageInput" accept="image/jpeg, image/png" class="text-sm text-gray-500" />
+                    </div>
+                    <button id="scanBtn" class="mt-6 w-full py-3 rounded-md font-semibold transition duration-200 bg-pink-600 text-white hover:bg-pink-700">Scan Prescription ✨</button>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+
+            document.getElementById('closeScannerModal').addEventListener('click', () => modal.classList.add('hidden'));
+
+            const imageInput = document.getElementById('imageInput');
+            const prescriptionImage = document.getElementById('prescriptionImage');
+            const imagePlaceholder = document.getElementById('imagePlaceholder');
+            const scanBtn = document.getElementById('scanBtn');
+            let base64Image = null;
+
+            imageInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        base64Image = reader.result.split(',')[1];
+                        prescriptionImage.src = reader.result;
+                        prescriptionImage.classList.remove('hidden');
+                        imagePlaceholder.classList.add('hidden');
+                        scanBtn.disabled = false;
+                        scanBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                        scanBtn.classList.add('bg-pink-600', 'hover:bg-pink-700');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            scanBtn.addEventListener('click', async () => {
+                if (!base64Image) return;
+
+                scanBtn.textContent = 'Scanning...';
+                scanBtn.disabled = true;
+                
+                const prompt = `Extract medicine names from this prescription. List them in a JSON array of strings, like this: ["medicine_name_1", "medicine_name_2"]. Only include the medicine names, nothing else.`;
+                const payload = {
+                    contents: [{
+                        parts: [
+                            { text: prompt },
+                            { inlineData: { mimeType: "image/jpeg", data: base64Image } }
+                        ]
+                    }],
+                    tools: [{ "google_search": {} }]
+                };
+                const apiKey = "AIzaSyB_-k73lONeSsAheB06V4ZGLSB_J0ML9QU";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    const jsonText = rawText.substring(rawText.indexOf('[')).replace(/```json\n/, '').replace(/```/, '');
+                    const parsedMedicines = JSON.parse(jsonText);
+                    
+                    if (parsedMedicines && parsedMedicines.length > 0) {
+                        const firstMedicine = parsedMedicines[0];
+                        document.getElementById('searchInput').value = firstMedicine;
+                        document.getElementById('searchForm').dispatchEvent(new Event('submit'));
+                        modal.classList.add('hidden');
+                    }
+                } catch (error) {
+                    console.error("Error scanning prescription:", error);
+                    // Handle error message gracefully
+                } finally {
+                    scanBtn.textContent = 'Scan Prescription ✨';
+                    scanBtn.disabled = false;
+                }
+            });
+        }
+
+        // --- Event Listeners for Main Buttons ---
+        document.getElementById('searchForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const searchTerm = document.getElementById('searchInput').value;
+            const loadingHtml = `
+                <div class="text-center text-teal-700 text-xl py-8">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-teal-500 mx-auto mb-4"></div>
+                    Searching for best prices...
+                </div>
+            `;
+            document.getElementById('searchResults').innerHTML = loadingHtml;
+
+            setTimeout(() => {
+                const filtered = allMockMedicines.filter(m =>
+                    m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    m.genericName.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+                renderSearchResults(filtered);
+            }, 800);
+        });
+
+        document.getElementById('reviewBtn').addEventListener('click', () => {
+            renderReviewModal();
+        });
+
+        document.getElementById('chatbotBtn').addEventListener('click', () => {
+            renderChatbotModal();
+        });
+
+        document.getElementById('scannerBtn').addEventListener('click', () => {
+            renderScannerModal();
+        });
+    </script>
+</body>
+</html>
