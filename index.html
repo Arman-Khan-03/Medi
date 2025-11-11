@@ -350,8 +350,8 @@
                         },
                         model: "gemini-2.5-flash-preview-tts"
                     };
-                    const apiKey = "AIzaSyB_-k73lONeSsAheB06V4ZGLSB_J0ML9QU";
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+                    const apiKey = "";
+                    const apiUrl = ``;
 
                     const response = await fetch(apiUrl, {
                         method: 'POST',
@@ -395,8 +395,8 @@
 
                 const prompt = `As a medical assistant, explain what ${medicine.genericName} is used for, the common symptoms it treats, and a simple explanation of how it works. Use simple language and no medical jargon.`;
                 const payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }] };
-                const apiKey = "AIzaSyB_-k73lONeSsAheB06V4ZGLSB_J0ML9QU";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                const apiKey = "";
+                const apiUrl = ``;
 
                 try {
                     const response = await fetch(apiUrl, {
@@ -538,8 +538,8 @@
 
                 const prompt = `You are a helpful health assistant. Provide general, non-diagnostic information based on the symptoms described. Do not attempt to diagnose or recommend specific treatments. Always start your response with a clear disclaimer like: "Disclaimer: This is for informational purposes only and not a substitute for professional medical advice. Please consult a doctor for a proper diagnosis and treatment plan." User's symptoms: ${userInput}.`;
                 const payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }] };
-                const apiKey = "AIzaSyB_-k73lONeSsAheB06V4ZGLSB_J0ML9QU";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                const apiKey = "";
+                const apiUrl = ``;
 
                 try {
                     const response = await fetch(apiUrl, {
@@ -647,8 +647,8 @@
                     }],
                     tools: [{ "google_search": {} }]
                 };
-                const apiKey = "AIzaSyB_-k73lONeSsAheB06V4ZGLSB_J0ML9QU";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                const apiKey = "";
+                const apiUrl = ``;
 
                 try {
                     const response = await fetch(apiUrl, {
